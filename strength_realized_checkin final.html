@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Strength Realized — Weekly Check-In</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --rose: #c8859a; --rose-light: #f2dde5; --rose-mid: #e0b4c4; --rose-deep: #a06478;
+    --steel: #8a96a8; --steel-light: #eaedf2; --steel-mid: #c4cad4;
+    --cream: #faf8f6; --dark: #2e2830; --mid: #6b6370; --light-text: #9a8fa0;
+    --border: #e8dde8; --white: #ffffff;
+    --green: #6aab8a; --green-light: #e6f4ed;
+    --red: #c05060; --red-light: #fdf0f2; --red-border: #f0c0c8;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); min-height: 100vh; }
+
+  /* ── SCREENS ── */
+  .screen { display: none; }
+  .screen.active { display: flex; }
+
+  #login-screen, #signup-screen {
+    min-height: 100vh; align-items: center; justify-content: center;
+    padding: 2rem 1rem;
+    background: linear-gradient(160deg, #f8eef3 0%, #eeeaf4 45%, #e6ecf2 100%);
+    position: relative; overflow: hidden;
+  }
+  #login-screen::before, #signup-screen::before { content: ''; position: absolute; top: -100px; right: -100px; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(200,133,154,0.13) 0%, transparent 65%); pointer-events: none; }
+  #login-screen::after, #signup-screen::after { content: ''; position: absolute; bottom: -80px; left: -80px; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, rgba(138,150,168,0.12) 0%, transparent 65%); pointer-events: none; }
+
+  #checkin-screen { display: none; padding: 2rem 1rem 5rem; flex-direction: column; }
+
+  #success-screen {
+    min-height: 100vh; align-items: center; justify-content: center;
+    padding: 2rem;
+    background: linear-gradient(160deg, #f8eef3 0%, #eeeaf4 45%, #e6ecf2 100%);
+  }
+
+  /* ── AUTH CARD ── */
+  .auth-card {
+    background: var(--white); border: 1px solid var(--rose-light);
+    border-radius: 24px; padding: 3rem 2.5rem 2.5rem;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 8px 48px rgba(120,80,100,0.12);
+    position: relative; z-index: 1;
+  }
+  .auth-brand { text-align: center; margin-bottom: 2.5rem; }
+  .auth-monogram {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--rose-light) 0%, #eae8f2 100%);
+    border: 1px solid var(--rose-mid);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.25rem;
+    font-family: 'Cormorant Garamond', serif; font-size: 22px;
+    color: var(--rose-deep); font-style: italic;
+  }
+  .auth-brand-label { font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--rose-deep); margin-bottom: 0.5rem; font-weight: 500; }
+  .auth-brand h1 { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; color: var(--dark); line-height: 1.15; }
+  .auth-brand h1 em { color: var(--rose-deep); font-style: italic; }
+  .auth-brand p { font-size: 13px; color: var(--mid); font-weight: 300; margin-top: 0.4rem; }
+  .auth-divider { height: 1px; background: linear-gradient(to right, transparent, var(--rose-light), transparent); margin: 0 0 2rem; }
+
+  .auth-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1rem; }
+  .auth-field label { font-size: 10px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--mid); }
+  .auth-field input {
+    width: 100%; background: var(--cream); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; font-size: 14px;
+    font-family: 'DM Sans', sans-serif; color: var(--dark);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .auth-field input:focus { outline: none; border-color: var(--rose-mid); box-shadow: 0 0 0 3px rgba(200,133,154,0.12); }
+  .auth-field input::placeholder { color: var(--light-text); }
+
+  .auth-msg {
+    font-size: 12px; border-radius: 8px; padding: 8px 12px;
+    margin-bottom: 1rem; display: none;
+  }
+  .auth-msg.error { color: var(--red); background: var(--red-light); border: 1px solid var(--red-border); }
+  .auth-msg.success { color: #3a7a5a; background: var(--green-light); border: 1px solid #b0dcc8; }
+  .auth-msg.show { display: block; }
+
+  .auth-btn {
+    width: 100%; padding: 13px;
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-deep) 100%);
+    color: white; border: none; border-radius: 12px;
+    font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+    letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    box-shadow: 0 4px 20px rgba(160,100,120,0.28); margin-top: 0.5rem;
+  }
+  .auth-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .auth-btn:active { transform: translateY(0); }
+  .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .auth-switch { text-align: center; margin-top: 1.5rem; font-size: 13px; color: var(--mid); }
+  .auth-switch a { color: var(--rose-deep); text-decoration: none; font-weight: 500; cursor: pointer; }
+  .auth-switch a:hover { text-decoration: underline; }
+  .auth-footer { text-align: center; margin-top: 1rem; font-size: 12px; color: var(--light-text); font-family: 'Cormorant Garamond', serif; font-style: italic; }
+
+  /* ── CHECK-IN ── */
+  .page { max-width: 660px; margin: 0 auto; width: 100%; }
+
+  .header {
+    text-align: center; padding: 2.75rem 2rem 2.25rem;
+    background: linear-gradient(160deg, #f8eef3 0%, #eeeaf4 45%, #e6ecf2 100%);
+    border-radius: 20px; border: 1px solid var(--rose-light);
+    margin-bottom: 1.5rem; position: relative; overflow: hidden;
+  }
+  .header::before { content: ''; position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(200,133,154,0.12) 0%, transparent 70%); pointer-events: none; }
+  .welcome-pill { display: inline-block; background: rgba(200,133,154,0.12); border: 1px solid var(--rose-mid); border-radius: 999px; padding: 4px 14px; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--rose-deep); margin-bottom: 1rem; }
+  .header-monogram { width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-light), #eae8f2); border: 1px solid var(--rose-mid); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-family: 'Cormorant Garamond', serif; font-size: 20px; color: var(--rose-deep); font-style: italic; }
+  .header h2 { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 300; color: var(--dark); }
+  .header h2 em { color: var(--rose-deep); font-style: italic; }
+  .header p { font-size: 13px; color: var(--mid); margin-top: 0.4rem; font-weight: 300; }
+  .header-actions { display: flex; align-items: center; justify-content: flex-end; margin-top: 1.25rem; }
+  .logout-btn { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mid); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: border-color 0.2s, color 0.2s; }
+  .logout-btn:hover { border-color: var(--rose-mid); color: var(--rose-deep); }
+
+  .section { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 1.75rem 1.75rem 2rem; margin-bottom: 1.25rem; box-shadow: 0 1px 8px rgba(120,80,100,0.05); }
+  .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; }
+  .section-num { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-light), #eae8f2); border: 1px solid var(--rose-mid); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: var(--rose-deep); flex-shrink: 0; }
+  .section-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 400; color: var(--dark); }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); }
+  .field input, .field textarea { width: 100%; background: var(--cream); border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--dark); transition: border-color 0.2s, box-shadow 0.2s; }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--rose-mid); box-shadow: 0 0 0 3px rgba(200,133,154,0.10); }
+  .field input::placeholder, .field textarea::placeholder { color: var(--light-text); }
+  .field textarea { resize: vertical; min-height: 90px; line-height: 1.55; }
+
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .grid-3 { grid-template-columns: 1fr 1fr; } .grid-4 { grid-template-columns: 1fr 1fr; } }
+  .divider { height: 1px; background: linear-gradient(to right, transparent, var(--border), transparent); margin: 1.25rem 0; }
+  .sublabel { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); font-weight: 500; }
+
+  .photos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .photo-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .photo-box { width: 100%; aspect-ratio: 3/4; border: 1.5px dashed var(--rose-mid); border-radius: 12px; background: var(--cream); position: relative; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; overflow: hidden; transition: border-color 0.2s, background 0.2s; }
+  .photo-box:hover { border-color: var(--rose); background: var(--rose-light); }
+  .photo-box input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .photo-box .photo-icon { width: 28px; height: 28px; color: var(--rose-mid); }
+  .photo-box .photo-icon svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.5; }
+  .photo-box span { font-size: 11px; color: var(--light-text); text-align: center; }
+  .photo-preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 10px; display: none; }
+  .photo-angle { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); font-weight: 500; }
+  .photo-tip { margin-top: 1rem; padding: 10px 14px; background: var(--steel-light); border-radius: 10px; font-size: 12px; color: var(--steel); line-height: 1.5; }
+  .photo-tip strong { color: var(--mid); }
+
+  .submit-wrap { text-align: center; margin-top: 2rem; }
+  .submit-btn { padding: 15px 3rem; background: linear-gradient(135deg, var(--rose) 0%, var(--rose-deep) 100%); color: white; border: none; border-radius: 14px; font-size: 14px; font-weight: 500; font-family: 'DM Sans', sans-serif; letter-spacing: 0.08em; cursor: pointer; box-shadow: 0 6px 28px rgba(160,100,120,0.30); transition: opacity 0.2s, transform 0.15s; }
+  .submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .submit-btn:active { transform: translateY(0); }
+  .footer-note { margin-top: 1rem; font-size: 13px; font-family: 'Cormorant Garamond', serif; font-style: italic; color: var(--light-text); }
+
+  .success-card { background: var(--white); border: 1px solid var(--rose-light); border-radius: 24px; padding: 3rem 2.5rem; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 8px 48px rgba(120,80,100,0.12); }
+  .success-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--rose-light), #eae8f2); border: 1px solid var(--rose-mid); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 26px; }
+  .success-card h2 { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; margin-bottom: 0.75rem; }
+  .success-card h2 em { color: var(--rose-deep); font-style: italic; }
+  .success-card p { font-size: 14px; color: var(--mid); line-height: 1.6; margin-bottom: 1.5rem; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="screen active">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-monogram">SR</div>
+      <div class="auth-brand-label">Client Portal</div>
+      <h1>Strength <em>Realized</em></h1>
+      <p>Weekly Check-In</p>
+    </div>
+    <div class="auth-divider"></div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <div class="auth-msg error" id="login-error"></div>
+    <button class="auth-btn" id="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="auth-switch">Don't have an account? <a onclick="showScreen('signup-screen')">Create one</a></div>
+    <div class="auth-footer">Your progress is private &amp; secure.</div>
+  </div>
+</div>
+
+<!-- SIGN UP -->
+<div id="signup-screen" class="screen">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-monogram">SR</div>
+      <div class="auth-brand-label">Create Account</div>
+      <h1>Strength <em>Realized</em></h1>
+      <p>Set up your client account</p>
+    </div>
+    <div class="auth-divider"></div>
+    <div class="auth-field">
+      <label>Full Name</label>
+      <input type="text" id="signup-name" placeholder="Your name" />
+    </div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input type="email" id="signup-email" placeholder="your@email.com" />
+    </div>
+    <div class="auth-field">
+      <label>Create Password</label>
+      <input type="password" id="signup-password" placeholder="Min. 6 characters" />
+    </div>
+    <div class="auth-field">
+      <label>Confirm Password</label>
+      <input type="password" id="signup-confirm" placeholder="Repeat your password" onkeydown="if(event.key==='Enter')doSignup()" />
+    </div>
+    <div class="auth-msg error" id="signup-error"></div>
+    <div class="auth-msg success" id="signup-success"></div>
+    <button class="auth-btn" id="signup-btn" onclick="doSignup()">Create Account</button>
+    <div class="auth-switch">Already have an account? <a onclick="showScreen('login-screen')">Sign in</a></div>
+    <div class="auth-footer">Your progress is private &amp; secure.</div>
+  </div>
+</div>
+
+<!-- CHECK-IN -->
+<div id="checkin-screen" class="screen">
+  <div class="page">
+    <div class="header">
+      <div class="welcome-pill" id="welcome-pill">Welcome back ✦</div>
+      <div class="header-monogram">SR</div>
+      <h2>Weekly <em>Check-In</em></h2>
+      <p>Take your time. Every detail helps Liz support you better.</p>
+      <div class="header-actions">
+        <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <div class="section-title">Personal Info</div>
+      </div>
+      <div class="stack">
+        <div class="grid-2">
+          <div class="field"><label>Full Name</label><input type="text" id="field-name" placeholder="Your name" /></div>
+          <div class="field"><label>Check-In Date</label><input type="date" id="field-date" /></div>
+        </div>
+        <div class="grid-3">
+          <div class="field"><label>Age</label><input type="number" placeholder="e.g. 47" /></div>
+          <div class="field"><label>Height</label><input type="text" placeholder="e.g. 5'6&quot;" /></div>
+          <div class="field"><label>Week #</label><input type="number" placeholder="e.g. 4" /></div>
+        </div>
+        <div class="field">
+          <label>How are you feeling overall this week?</label>
+          <input type="text" placeholder="e.g. Tired but motivated, better than last week..." />
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <div class="section-title">Weight & Measurements</div>
+      </div>
+      <div class="stack">
+        <div class="grid-2">
+          <div class="field"><label>Current Weight</label><input type="text" placeholder="e.g. 152 lbs" /></div>
+          <div class="field"><label>Weigh-in Day & Time</label><input type="text" placeholder="e.g. Monday morning" /></div>
+        </div>
+        <div class="divider"></div>
+        <div class="sublabel">Measurements (optional)</div>
+        <div class="grid-4">
+          <div class="field"><label>Waist</label><input type="text" placeholder='31"' /></div>
+          <div class="field"><label>Hips</label><input type="text" placeholder='40"' /></div>
+          <div class="field"><label>Chest</label><input type="text" placeholder='36"' /></div>
+          <div class="field"><label>Thigh</label><input type="text" placeholder='22"' /></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">3</div>
+        <div class="section-title">Progress Photos</div>
+      </div>
+      <div class="photos-grid">
+        <div class="photo-col">
+          <div class="photo-box" id="box-front">
+            <input type="file" accept="image/*" onchange="previewPhoto(this,'box-front','prev-front')" />
+            <img class="photo-preview" id="prev-front" alt="" />
+            <div class="photo-icon"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+            <span>Tap to upload</span>
+          </div>
+          <div class="photo-angle">Front</div>
+        </div>
+        <div class="photo-col">
+          <div class="photo-box" id="box-side">
+            <input type="file" accept="image/*" onchange="previewPhoto(this,'box-side','prev-side')" />
+            <img class="photo-preview" id="prev-side" alt="" />
+            <div class="photo-icon"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+            <span>Tap to upload</span>
+          </div>
+          <div class="photo-angle">Side</div>
+        </div>
+        <div class="photo-col">
+          <div class="photo-box" id="box-back">
+            <input type="file" accept="image/*" onchange="previewPhoto(this,'box-back','prev-back')" />
+            <img class="photo-preview" id="prev-back" alt="" />
+            <div class="photo-icon"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+            <span>Tap to upload</span>
+          </div>
+          <div class="photo-angle">Back</div>
+        </div>
+      </div>
+      <div class="photo-tip">
+        <strong>Photo tips:</strong> Same time of day each week &nbsp;&middot;&nbsp; Same lighting &amp; location &nbsp;&middot;&nbsp; Sports bra + shorts &nbsp;&middot;&nbsp; Morning before eating is ideal
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <div class="section-title">Feedback for Liz</div>
+      </div>
+      <div class="stack">
+        <div class="field">
+          <label>How did your week go overall?</label>
+          <textarea placeholder="Share your wins, struggles, energy levels, sleep, stress — anything that felt significant this week."></textarea>
+        </div>
+        <div class="field">
+          <label>How did your workouts feel?</label>
+          <textarea placeholder="Energy, soreness, sessions missed, how the weights felt..."></textarea>
+        </div>
+        <div class="field">
+          <label>How did your nutrition feel?</label>
+          <textarea placeholder="Hunger, cravings, meals you skipped, anything that was hard to stick to..."></textarea>
+        </div>
+        <div class="field">
+          <label>Anything in your body that felt different this week?</label>
+          <textarea placeholder="Bloating, inflammation, aches, energy shifts, mood changes — no detail is too small."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">5</div>
+        <div class="section-title">Questions for Liz</div>
+      </div>
+      <div class="stack">
+        <div class="field">
+          <label>What do you want to ask Liz this week?</label>
+          <textarea placeholder="About your plan, your body, your progress — anything you've been wondering about. No question is too small."></textarea>
+        </div>
+        <div class="field">
+          <label>Is there anything you'd like Liz to adjust or focus on?</label>
+          <textarea placeholder="A workout, a meal approach, a goal, extra support in a specific area..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="submit-wrap">
+      <button class="submit-btn" onclick="handleSubmit()">Submit Check-In ✦</button>
+      <p class="footer-note">You're doing the work. That already makes you stronger.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div id="success-screen" class="screen">
+  <div class="success-card">
+    <div class="success-icon">✦</div>
+    <h2>Check-In <em>Received</em></h2>
+    <p>Liz will review your check-in and be in touch. Keep showing up — you're doing amazing.</p>
+    <button class="submit-btn" style="padding:12px 2rem;font-size:13px;" onclick="goBackToCheckin()">Submit Another</button>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://hmazojcjcfilaqorhnfh.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtYXpvamNqY2ZpbGFxb3JobmZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0ODc1ODksImV4cCI6MjA5NjA2MzU4OX0.bwcQnmR2-ryEl4QCDuINPH_phGLkq5wzUjGMgeLRaTU';
+
+  // Liz's master account (always works)
+  const LIZ = { email: 'strengthrealizedmethod@gmail.com', password: 'strengthrealized', name: 'Liz' };
+
+  let currentUser = null;
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => {
+      s.classList.remove('active');
+      s.style.display = 'none';
+    });
+    const el = document.getElementById(id);
+    el.style.display = 'flex';
+    el.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  // ── LOGIN ──
+  async function doLogin() {
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const pass  = document.getElementById('login-password').value.trim();
+    const errEl = document.getElementById('login-error');
+    const btn   = document.getElementById('login-btn');
+    errEl.classList.remove('show');
+
+    if (!email || !pass) { showErr(errEl, 'Please enter your email and password.'); return; }
+
+    // Check Liz first
+    if (email === LIZ.email.toLowerCase() && pass === LIZ.password) {
+      currentUser = { name: LIZ.name, email: LIZ.email };
+      saveSession(currentUser);
+      openCheckin(currentUser);
+      return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Signing in...';
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/clients?email=eq.${encodeURIComponent(email)}&select=*`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      });
+      const data = await res.json();
+      if (!data.length || data[0].password !== pass) {
+        showErr(errEl, 'Incorrect email or password. Please try again.');
+      } else {
+        currentUser = { name: data[0].name, email: data[0].email };
+        saveSession(currentUser);
+        openCheckin(currentUser);
+      }
+    } catch(e) {
+      showErr(errEl, 'Connection error. Please try again.');
+    }
+
+    btn.disabled = false; btn.textContent = 'Sign In';
+  }
+
+  // ── SIGN UP ──
+  async function doSignup() {
+    const name    = document.getElementById('signup-name').value.trim();
+    const email   = document.getElementById('signup-email').value.trim().toLowerCase();
+    const pass    = document.getElementById('signup-password').value.trim();
+    const confirm = document.getElementById('signup-confirm').value.trim();
+    const errEl   = document.getElementById('signup-error');
+    const sucEl   = document.getElementById('signup-success');
+    const btn     = document.getElementById('signup-btn');
+    errEl.classList.remove('show'); sucEl.classList.remove('show');
+
+    if (!name || !email || !pass || !confirm) { showErr(errEl, 'Please fill in all fields.'); return; }
+    if (pass.length < 6) { showErr(errEl, 'Password must be at least 6 characters.'); return; }
+    if (pass !== confirm) { showErr(errEl, 'Passwords do not match.'); return; }
+
+    btn.disabled = true; btn.textContent = 'Creating account...';
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/clients`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({ name, email, password: pass })
+      });
+
+      if (res.status === 201) {
+        sucEl.textContent = 'Account created! You can now sign in.';
+        sucEl.classList.add('show');
+        setTimeout(() => {
+          document.getElementById('login-email').value = email;
+          showScreen('login-screen');
+        }, 1800);
+      } else if (res.status === 409 || res.status === 400) {
+        showErr(errEl, 'An account with this email already exists.');
+      } else {
+        showErr(errEl, 'Something went wrong. Please try again.');
+      }
+    } catch(e) {
+      showErr(errEl, 'Connection error. Please try again.');
+    }
+
+    btn.disabled = false; btn.textContent = 'Create Account';
+  }
+
+  // ── HELPERS ──
+  function showErr(el, msg) { el.textContent = msg; el.classList.add('show'); }
+  function saveSession(user) { sessionStorage.setItem('sr_user', JSON.stringify(user)); }
+
+  function openCheckin(user) {
+    document.getElementById('welcome-pill').textContent = 'Welcome back, ' + user.name + ' \u2726';
+    document.getElementById('field-name').value = user.name;
+    document.getElementById('field-date').value = new Date().toISOString().split('T')[0];
+    showScreen('checkin-screen');
+  }
+
+  function doLogout() {
+    sessionStorage.removeItem('sr_user');
+    currentUser = null;
+    document.getElementById('login-email').value = '';
+    document.getElementById('login-password').value = '';
+    showScreen('login-screen');
+  }
+
+  function previewPhoto(input, boxId, prevId) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    const box = document.getElementById(boxId);
+    reader.onload = e => {
+      const img = document.getElementById(prevId);
+      img.src = e.target.result; img.style.display = 'block';
+      box.querySelector('.photo-icon').style.display = 'none';
+      box.querySelector('span').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleSubmit() { showScreen('success-screen'); }
+
+  function goBackToCheckin() {
+    const saved = sessionStorage.getItem('sr_user');
+    if (saved) openCheckin(JSON.parse(saved));
+  }
+
+  // Auto-login if session exists
+  const saved = sessionStorage.getItem('sr_user');
+  if (saved) { currentUser = JSON.parse(saved); openCheckin(currentUser); }
+  else { showScreen('login-screen'); }
+</script>
+</body>
+</html>
